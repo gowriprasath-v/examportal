@@ -3,23 +3,23 @@ const { Pool } = require("pg");
 // 1. Get the connection string
 let connectionString = process.env.POSTGRES_URL || "postgres://root:dakshana2005@127.0.0.1:5432/secure_exam_portal";
 
-// 2. Determine if we are in a production/remote environment
-const isRemote = !connectionString.includes("localhost") && !connectionString.includes("127.0.0.1");
+// 2. Identify if we are in production
+const isProduction = process.env.NODE_ENV === "production" || (!connectionString.includes("localhost") && !connectionString.includes("127.0.0.1"));
 
-// 3. For remote connections, we must handle the Vercel/Neon SSL requirements.
-// Often, the connection string contains ?sslmode=require which can force strict checking.
-// We clean the URL to ensure our programmatic 'ssl' object takes precedence.
-if (isRemote) {
-    // If it's a remote connection, ensure we don't have conflicting sslmode in the URL
-    // but we can append it if the driver requires it.
-    if (!connectionString.includes("sslmode=")) {
-        connectionString += (connectionString.includes("?") ? "&" : "?") + "sslmode=require";
-    }
+if (isProduction) {
+    // 3. STRIP sslmode from the URL to prevent it from forcing 'verify-full'
+    // Vercel/Neon defaults often include ?sslmode=require which overrides programmatic settings
+    connectionString = connectionString.replace(/(\?|&|#)sslmode=[^&^#]*/, "");
+    
+    // 4. Force Node to ignore self-signed certificate errors globally for this process
+    // This is a common requirement for connecting to certain hosted Postgres instances from Serverless
+    process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
 }
 
 const pool = new Pool({
   connectionString: connectionString,
-  ssl: isRemote ? { rejectUnauthorized: false } : false
+  // 5. Explicitly set SSL object for production
+  ssl: isProduction ? { rejectUnauthorized: false } : false
 });
 
 pool.on('connect', () => {
