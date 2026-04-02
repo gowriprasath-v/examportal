@@ -1,29 +1,41 @@
 const { Pool } = require("pg");
 
-// 1. Get the connection string
+/**
+ * DATABASE CONNECTION - TOTAL FIX
+ * 1. Uses native URL parser to ensure delimiters (?, &) are preserved.
+ * 2. Explicitly sets rejectUnauthorized: false for all remote connections.
+ */
+
 let connectionString = process.env.POSTGRES_URL || "postgres://root:dakshana2005@127.0.0.1:5432/secure_exam_portal";
 
-// 2. Identify if we are in production
-const isProduction = process.env.NODE_ENV === "production" || (!connectionString.includes("localhost") && !connectionString.includes("127.0.0.1"));
+// Check if we are in a production/remote context
+const isProduction = process.env.NODE_ENV === "production" || (!connectionString.includes("127.0.0.1") && !connectionString.includes("localhost"));
 
 if (isProduction) {
-    // 3. STRIP sslmode from the URL to prevent it from forcing 'verify-full'
-    // Vercel/Neon defaults often include ?sslmode=require which overrides programmatic settings
-    connectionString = connectionString.replace(/(\?|&|#)sslmode=[^&^#]*/, "");
-    
-    // 4. Force Node to ignore self-signed certificate errors globally for this process
-    // This is a common requirement for connecting to certain hosted Postgres instances from Serverless
-    process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+    try {
+        // Use Node's built-in URL parser to handle the connection string safely
+        const dbUrl = new URL(connectionString);
+        
+        // Ensure sslmode is set to 'require' but rely on the Pool object's 
+        // rejectUnauthorized setting to bypass self-signed cert checks.
+        dbUrl.searchParams.set("sslmode", "require");
+        
+        connectionString = dbUrl.toString();
+        
+        // Final fallback for certain serverless drivers
+        process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+    } catch (e) {
+        console.error("Error parsing connection string:", e.message);
+    }
 }
 
 const pool = new Pool({
   connectionString: connectionString,
-  // 5. Explicitly set SSL object for production
   ssl: isProduction ? { rejectUnauthorized: false } : false
 });
 
 pool.on('connect', () => {
-    console.log("PostgreSQL Connected successfully.");
+    console.log("PostgreSQL Connection established successfully.");
 });
 
 pool.on('error', (err) => {
