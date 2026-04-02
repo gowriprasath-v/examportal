@@ -1,5 +1,7 @@
 const jwt = require("jsonwebtoken");
-const JWT_SECRET = "super_secret_key_123";
+
+// Use the same secret as authController (Environment variable with fallback)
+const JWT_SECRET = process.env.JWT_SECRET || "super_secret_key_123";
 
 exports.verifyToken = (req, res, next) => {
     const authHeader = req.headers['authorization'];
@@ -12,6 +14,8 @@ exports.verifyToken = (req, res, next) => {
         req.user = verified;
         next();
     } catch (err) {
+        // If the secret doesn't match or token is expired, this block is hit
+        console.error("JWT Verification Error:", err.message);
         res.status(403).json({ success: false, message: "Invalid Token" });
     }
 };
