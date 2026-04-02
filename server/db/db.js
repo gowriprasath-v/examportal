@@ -3,25 +3,23 @@ const { Pool } = require("pg");
 // Configuration for local and Vercel environments
 const connectionString = process.env.POSTGRES_URL || "postgres://root:dakshana2005@127.0.0.1:5432/secure_exam_portal";
 
+// Vercel Postgres/Neon requires SSL. 
+// We use rejectUnauthorized: false to handle self-signed certs in the chain.
 const pool = new Pool({
   connectionString: connectionString,
-  ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : false
+  ssl: connectionString.includes("localhost") || connectionString.includes("127.0.0.1") 
+    ? false 
+    : { rejectUnauthorized: false }
 });
 
-function connectWithRetry() {
-  pool.connect((err, client, release) => {
-    if (err) {
-      console.error("Postgres Connection Failed (Retrying in 5s):", err.code || err.message);
-      setTimeout(connectWithRetry, 5000);
-    } else {
-      console.log("PostgreSQL Connected...");
-      release(); // Release client back into the pool
-    }
-  });
-}
+// For serverless functions, we don't necessarily need a persistent connection check on startup,
+// but we'll log once if a connection is established.
+pool.on('connect', () => {
+    console.log("PostgreSQL Connected...");
+});
 
-connectWithRetry();
+pool.on('error', (err) => {
+    console.error("Postgres Pool Error:", err.message);
+});
 
-// Add promise compatibility layer if needed (mysql2 had both)
-// But here we'll just export the pool as the default
 module.exports = pool;
