@@ -9,7 +9,8 @@ const db = require("../db/db");
  * @param {string} details - Additional information about the event.
  */
 const logEvent = (username, role, ip, eventType, details) => {
-    const sql = "INSERT INTO audit_logs (username, role, ip, event_type, details) VALUES (?, ?, ?, ?, ?)";
+    // Postgres uses $1, $2, etc.
+    const sql = "INSERT INTO audit_logs (username, role, ip, event_type, details) VALUES ($1, $2, $3, $4, $5)";
     db.query(sql, [username || 'unknown', role || 'Unknown', ip || '0.0.0.0', eventType, details], (err) => {
         if (err) {
             console.error("Audit Log Error:", err);

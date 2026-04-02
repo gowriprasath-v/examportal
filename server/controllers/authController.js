@@ -21,8 +21,8 @@ exports.login = (req, res) => {
     return res.status(400).json({ success: false, message: "Invalid CAPTCHA" });
   }
 
-  // Fetch user by username only
-  const sql = "SELECT * FROM users WHERE name=?";
+  // Fetch user by username only - Postgres uses $1 instead of ?
+  const sql = "SELECT * FROM users WHERE name=$1";
 
   db.query(sql, [username], async (err, result) => {
     if (err) {
@@ -31,12 +31,13 @@ exports.login = (req, res) => {
       return res.status(500).json({ success: false, message: "Server error" });
     }
 
-    if (result.length === 0) {
+    // Postgres result is result.rows
+    if (result.rows.length === 0) {
       logEvent(username, "Unknown", ip, "Login Failure", "User not found");
       return res.status(401).json({ success: false, message: "Invalid credentials" });
     }
 
-    const user = result[0];
+    const user = result.rows[0];
 
     try {
       const isMatch = await bcrypt.compare(password, user.password);
@@ -89,14 +90,14 @@ exports.register = async (req, res) => {
 
   try {
     // Check if user already exists
-    const checkSql = "SELECT id FROM users WHERE name = ? OR email = ?";
+    const checkSql = "SELECT id FROM users WHERE name = $1 OR email = $2";
     db.query(checkSql, [username, email], async (err, result) => {
       if (err) {
         console.error("Registration Check Error:", err);
         return res.status(500).json({ success: false, message: "Server error" });
       }
 
-      if (result.length > 0) {
+      if (result.rows.length > 0) {
         logEvent(username, role, ip, "Registration Failure", "Username or Email already taken");
         return res.status(400).json({ success: false, message: "Username or Email already taken" });
       }
@@ -105,7 +106,7 @@ exports.register = async (req, res) => {
       const hashedPassword = await bcrypt.hash(password, 10);
 
       // Insert user
-      const insertSql = "INSERT INTO users (name, email, phone, password, role) VALUES (?, ?, ?, ?, ?)";
+      const insertSql = "INSERT INTO users (name, email, phone, password, role) VALUES ($1, $2, $3, $4, $5)";
       db.query(insertSql, [username, email, phone || null, hashedPassword, role], (err) => {
         if (err) {
           console.error("Registration Insert Error:", err);
@@ -125,11 +126,10 @@ exports.register = async (req, res) => {
 };
 
 exports.getAuditLogs = (req, res) => {
-  // Basic role check (assuming middleware will handle token verification)
   const sql = "SELECT * FROM audit_logs ORDER BY timestamp DESC";
   db.query(sql, (err, result) => {
     if (err) return res.status(500).json({ success: false, message: "Failed to fetch logs" });
-    res.json(result);
+    res.json(result.rows);
   });
 };
 
@@ -147,6 +147,6 @@ exports.getUsers = (req, res) => {
 
   db.query(sql, (err, result) => {
     if (err) return res.json([]);
-    res.json(result);
+    res.json(result.rows);
   });
 };

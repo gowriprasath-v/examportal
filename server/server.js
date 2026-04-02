@@ -39,6 +39,11 @@ app.use((req, res) => {
 /* ========================
    START SERVER
 ======================== */
-app.listen(3000, () => {
-    console.log("Server running on port 3000 at http://localhost:3000");
-});
+if (process.env.NODE_ENV !== 'production') {
+    const PORT = process.env.PORT || 3000;
+    app.listen(PORT, () => {
+        console.log(`Server running on port ${PORT} at http://localhost:${PORT}`);
+    });
+}
+
+module.exports = app;

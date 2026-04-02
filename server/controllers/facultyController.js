@@ -15,16 +15,17 @@ exports.createExam = (req, res) => {
     }
  
     // Save as 'draft' initially; faculty must publish later
-    const sql = "INSERT INTO exams (title, subject, description, duration, scheduled_at, instructions, created_by, status) VALUES (?, ?, ?, ?, ?, ?, ?, 'draft')";
+    const sql = "INSERT INTO exams (title, subject, description, duration, scheduled_at, instructions, created_by, status) VALUES ($1, $2, $3, $4, $5, $6, $7, 'draft') RETURNING id";
     db.query(sql, [title, subject || null, description, duration, scheduled_at || null, instructions || null, faculty_id], (err, result) => {
 
         if (err) {
             console.error("[Faculty] createExam DB error:", err);
             return res.status(500).json({ success: false, message: "Database error creating exam" });
         }
-        console.log(`[Faculty] Exam created with ID: ${result.insertId}`);
-        logEvent(req.user.username, req.user.role, req.ip, "Exam Created", `Exam ID: ${result.insertId}, Title: ${title}`);
-        res.json({ success: true, message: "Exam created as draft", examId: result.insertId });
+        const newId = result.rows[0].id;
+        console.log(`[Faculty] Exam created with ID: ${newId}`);
+        logEvent(req.user.username, req.user.role, req.ip, "Exam Created", `Exam ID: ${newId}, Title: ${title}`);
+        res.json({ success: true, message: "Exam created as draft", examId: newId });
     });
 
 };
@@ -36,14 +37,14 @@ exports.getExamById = (req, res) => {
     const faculty_id = req.user.id;
     console.log(`[Faculty] getExamById: id=${id}, faculty=${faculty_id}`);
 
-    const sql = "SELECT * FROM exams WHERE id = ? AND created_by = ?";
-    db.query(sql, [id, faculty_id], (err, results) => {
+    const sql = "SELECT * FROM exams WHERE id = $1 AND created_by = $2";
+    db.query(sql, [id, faculty_id], (err, result) => {
         if (err) {
             console.error("[Faculty] getExamById DB error:", err);
             return res.status(500).json({ success: false, message: "Database error" });
         }
-        if (results.length === 0) return res.status(404).json({ success: false, message: "Exam not found" });
-        res.json({ success: true, exam: results[0] });
+        if (result.rows.length === 0) return res.status(404).json({ success: false, message: "Exam not found" });
+        res.json({ success: true, exam: result.rows[0] });
     });
 };
 
@@ -61,13 +62,13 @@ exports.updateExamStatus = (req, res) => {
         return res.status(400).json({ success: false, message: "Invalid status value" });
     }
 
-    const sql = "UPDATE exams SET status = ? WHERE id = ? AND created_by = ?";
+    const sql = "UPDATE exams SET status = $1 WHERE id = $2 AND created_by = $3";
     db.query(sql, [status, id, faculty_id], (err, result) => {
         if (err) {
             console.error("[Faculty] updateExamStatus DB error:", err);
             return res.status(500).json({ success: false, message: "Database error updating status" });
         }
-        if (result.affectedRows === 0) {
+        if (result.rowCount === 0) {
             return res.status(404).json({ success: false, message: "Exam not found or permission denied" });
         }
         console.log(`[Faculty] Exam ${id} status updated to '${status}'`);
@@ -85,7 +86,7 @@ exports.addQuestions = (req, res) => {
     console.log(`[Faculty] addQuestions: exam_id=${exam_id}, count=${questions.length}`);
 
     // Real schema: question, option1, option2, option3, option4, correct_option (1-4)
-    const sql = "INSERT INTO questions (exam_id, question, option1, option2, option3, option4, correct_option) VALUES (?, ?, ?, ?, ?, ?, ?)";
+    const sql = "INSERT INTO questions (exam_id, question, option1, option2, option3, option4, correct_option) VALUES ($1, $2, $3, $4, $5, $6, $7)";
 
     let completed = 0;
     let errors = [];
@@ -117,17 +118,17 @@ exports.getExamQuestions = (req, res) => {
     console.log(`[Faculty] getExamQuestions: exam_id=${id}, faculty=${faculty_id}`);
 
     // Verify exam belongs to this faculty first
-    db.query("SELECT id FROM exams WHERE id = ? AND created_by = ?", [id, faculty_id], (err, exams) => {
+    db.query("SELECT id FROM exams WHERE id = $1 AND created_by = $2", [id, faculty_id], (err, result) => {
         if (err) return res.status(500).json({ success: false, message: "Database error" });
-        if (exams.length === 0) return res.status(403).json({ success: false, message: "Exam not found or permission denied" });
+        if (result.rows.length === 0) return res.status(403).json({ success: false, message: "Exam not found or permission denied" });
 
-        db.query("SELECT * FROM questions WHERE exam_id = ? ORDER BY id ASC", [id], (err2, results) => {
+        db.query("SELECT * FROM questions WHERE exam_id = $1 ORDER BY id ASC", [id], (err2, results) => {
             if (err2) {
                 console.error("[Faculty] getExamQuestions DB error:", err2.message);
                 return res.status(500).json({ success: false, message: "Error fetching questions" });
             }
-            console.log(`[Faculty] Found ${results.length} questions for exam ${id}`);
-            res.json({ success: true, questions: results });
+            console.log(`[Faculty] Found ${results.rows.length} questions for exam ${id}`);
+            res.json({ success: true, questions: results.rows });
         });
     });
 };
@@ -141,16 +142,15 @@ exports.deleteQuestion = (req, res) => {
 
     // Only allow delete if exam belongs to faculty
     const sql = `
-        DELETE q FROM questions q
-        JOIN exams e ON q.exam_id = e.id
-        WHERE q.id = ? AND e.created_by = ?
+        DELETE FROM questions
+        WHERE id = $1 AND exam_id IN (SELECT id FROM exams WHERE created_by = $2)
     `;
     db.query(sql, [question_id, faculty_id], (err, result) => {
         if (err) {
             console.error("[Faculty] deleteQuestion error:", err.message);
             return res.status(500).json({ success: false, message: "Error deleting question" });
         }
-        if (result.affectedRows === 0) return res.status(404).json({ success: false, message: "Question not found or permission denied" });
+        if (result.rowCount === 0) return res.status(404).json({ success: false, message: "Question not found or permission denied" });
         res.json({ success: true, message: "Question deleted" });
     });
 };
@@ -161,30 +161,28 @@ exports.getMyExams = (req, res) => {
     const faculty_id = req.user.id;
     console.log(`[Faculty] getMyExams for faculty ID: ${faculty_id}`);
 
-    // NOTE: exams table columns: id, title, description, duration, created_by, status
-    // There is NO created_at column — do NOT use ORDER BY created_at
-    const sql = "SELECT * FROM exams WHERE created_by = ? ORDER BY id DESC";
-    db.query(sql, [faculty_id], (err, results) => {
+    const sql = "SELECT * FROM exams WHERE created_by = $1 ORDER BY id DESC";
+    db.query(sql, [faculty_id], (err, result) => {
         if (err) {
             console.error("[Faculty] getMyExams DB error:", err.message);
             return res.status(500).json({ success: false, message: "Database error fetching exams" });
         }
-        console.log(`[Faculty] Found ${results.length} exams for faculty ${faculty_id}`);
-        res.json({ success: true, exams: results }); // returns [] when no exams exist
+        console.log(`[Faculty] Found ${result.rows.length} exams for faculty ${faculty_id}`);
+        res.json({ success: true, exams: result.rows }); // returns [] when no exams exist
     });
 };
 
 exports.getExamResults = (req, res) => {
     const { exam_id } = req.params;
     const sql = `
-    SELECT r.student_id, u.name as student_name, r.score, r.total_questions as total_marks, (r.score / r.total_questions * 100) as percentage, r.created_at as date
+    SELECT r.student_id, u.name as student_name, r.score, r.total_questions as total_marks, (CAST(r.score AS FLOAT) / r.total_questions * 100) as percentage, r.created_at as date
     FROM results r 
     JOIN users u ON r.student_id = u.id 
-    WHERE r.exam_id = ?
+    WHERE r.exam_id = $1
   `;
-    db.query(sql, [exam_id], (err, results) => {
+    db.query(sql, [exam_id], (err, result) => {
         if (err) return res.status(500).json({ success: false, message: "Database error" });
-        res.json({ success: true, results });
+        res.json({ success: true, results: result.rows });
     });
 };
 
@@ -195,12 +193,12 @@ exports.getDetailedResults = (req, res) => {
         FROM results r
         JOIN users u ON r.student_id = u.id
         JOIN exams e ON r.exam_id = e.id
-        WHERE r.id = ?
+        WHERE r.id = $1
     `;
-    db.query(sql, [result_id], (err, results) => {
+    db.query(sql, [result_id], (err, result) => {
         if (err) return res.status(500).json({ success: false, message: "Database error" });
-        if (results.length === 0) return res.status(404).json({ success: false, message: "Result not found" });
-        res.json({ success: true, result: results[0] });
+        if (result.rows.length === 0) return res.status(404).json({ success: false, message: "Result not found" });
+        res.json({ success: true, result: result.rows[0] });
     });
 };
 
@@ -210,16 +208,16 @@ exports.getExamStats = (req, res) => {
         SELECT 
             COUNT(*) as total_submissions,
             AVG(score) as avg_score,
-            (SUM(CASE WHEN score >= (total_questions * 0.5) THEN 1 ELSE 0 END) / COUNT(*)) * 100 as pass_rate
+            (CAST(SUM(CASE WHEN score >= (total_questions * 0.5) THEN 1 ELSE 0 END) AS FLOAT) / COUNT(*)) * 100 as pass_rate
         FROM results 
-        WHERE exam_id = ?
+        WHERE exam_id = $1
     `;
-    db.query(sql, [exam_id], (err, results) => {
+    db.query(sql, [exam_id], (err, result) => {
         if (err) {
             console.error("Stats Error:", err);
             return res.status(500).json({ success: false, message: "Error fetching stats" });
         }
-        res.json({ success: true, stats: results[0] });
+        res.json({ success: true, stats: result.rows[0] });
     });
 };
 
@@ -228,22 +226,22 @@ exports.duplicateExam = (req, res) => {
     const faculty_id = req.user.id;
 
     // 1. Get original exam
-    db.query("SELECT * FROM exams WHERE id = ? AND created_by = ?", [id, faculty_id], (err, exams) => {
-        if (err || exams.length === 0) return res.status(404).json({ success: false, message: "Exam not found" });
+    db.query("SELECT * FROM exams WHERE id = $1 AND created_by = $2", [id, faculty_id], (err, result) => {
+        if (err || result.rows.length === 0) return res.status(404).json({ success: false, message: "Exam not found" });
 
-        const oldExam = exams[0];
+        const oldExam = result.rows[0];
         const newTitle = `Copy of ${oldExam.title}`;
  
-        // 2. Create new exam draft
-        const insertExSql = "INSERT INTO exams (title, subject, description, duration, scheduled_at, instructions, created_by, status) VALUES (?, ?, ?, ?, ?, ?, ?, 'draft')";
-        db.query(insertExSql, [newTitle, oldExam.subject, oldExam.description, oldExam.duration, oldExam.scheduled_at, oldExam.instructions, faculty_id], (err2, result) => {
+        // 2. Create new exam draft - returning ID for question duplication
+        const insertExSql = "INSERT INTO exams (title, subject, description, duration, scheduled_at, instructions, created_by, status) VALUES ($1, $2, $3, $4, $5, $6, $7, 'draft') RETURNING id";
+        db.query(insertExSql, [newTitle, oldExam.subject, oldExam.description, oldExam.duration, oldExam.scheduled_at, oldExam.instructions, faculty_id], (err2, result2) => {
 
             if (err2) return res.status(500).json({ success: false, message: "Error duplicating exam header" });
 
-            const newExamId = result.insertId;
+            const newExamId = result2.rows[0].id;
 
             // 3. Duplicate questions
-            const qSql = "INSERT INTO questions (exam_id, question, option1, option2, option3, option4, correct_option) SELECT ?, question, option1, option2, option3, option4, correct_option FROM questions WHERE exam_id = ?";
+            const qSql = "INSERT INTO questions (exam_id, question, option1, option2, option3, option4, correct_option) SELECT $1, question, option1, option2, option3, option4, correct_option FROM questions WHERE exam_id = $2";
             db.query(qSql, [newExamId, id], (err3) => {
                 if (err3) console.error("Error duplicating questions:", err3);
                 logEvent(req.user.username, req.user.role, req.ip, "Exam Duplicated", `Old ID: ${id}, New ID: ${newExamId}`);
@@ -256,17 +254,18 @@ exports.duplicateExam = (req, res) => {
 exports.getFacultyNotifications = (req, res) => {
     const faculty_id = req.user.id;
     // Mocking some notifications logic based on pending reviews or new results
+    // Postgres interval syntax: timestamp > NOW() - INTERVAL '1 day'
     const sql = `
         SELECT COUNT(*) as count 
         FROM results r 
         JOIN exams e ON r.exam_id = e.id 
-        WHERE e.created_by = ? AND r.timestamp > DATE_SUB(NOW(), INTERVAL 1 DAY)
+        WHERE e.created_by = $1 AND r.created_at > NOW() - INTERVAL '1 day'
     `;
-    db.query(sql, [faculty_id], (err, results) => {
+    db.query(sql, [faculty_id], (err, result) => {
         if (err) return res.status(500).json({ success: false, message: "Error" });
         const alerts = [];
-        if (results[0].count > 0) {
-            alerts.push({ type: 'info', message: `${results[0].count} new results in the last 24h` });
+        if (result.rows[0].count > 0) {
+            alerts.push({ type: 'info', message: `${result.rows[0].count} new results in the last 24h` });
         }
         res.json({ success: true, count: alerts.length, alerts });
     });
