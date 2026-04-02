@@ -10,38 +10,42 @@ const query = (sql, params) => new Promise((resolve, reject) => {
 
 async function run() {
     try {
+        console.log("Disabling foreign key checks...");
+        await query("SET FOREIGN_KEY_CHECKS = 0");
+
         console.log("Dropping users table...");
         await query("DROP TABLE IF EXISTS users");
 
-        console.log("Creating users table with VARCHAR(255)...");
+        console.log("Creating users table with VARCHAR(255) and email...");
         await query(`
-      CREATE TABLE users (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        name VARCHAR(255) NOT NULL UNIQUE,
-        password VARCHAR(255) NOT NULL,
-        role ENUM('Admin', 'Faculty', 'Student') NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
+        CREATE TABLE users (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          name VARCHAR(255) NOT NULL UNIQUE,
+          email VARCHAR(255) NOT NULL UNIQUE,
+          password VARCHAR(255) NOT NULL,
+          role ENUM('Admin', 'Faculty', 'Student') NOT NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+
+        console.log("Enabling foreign key checks...");
+        await query("SET FOREIGN_KEY_CHECKS = 1");
 
         const defaultUsers = [
-            { name: "admin", password: "adminpassword", role: "Admin" },
-            { name: "faculty", password: "facultypassword", role: "Faculty" },
-            { name: "student", password: "studentpassword", role: "Student" },
+            { name: "admin", email: "admin@example.com", password: "adminpassword", role: "Admin" },
+            { name: "faculty", email: "faculty@example.com", password: "facultypassword", role: "Faculty" },
+            { name: "student", email: "student@example.com", password: "studentpassword", role: "Student" },
         ];
 
         for (const user of defaultUsers) {
             const hashed = await bcrypt.hash(user.password, 10);
-            await query("INSERT INTO users (name, password, role) VALUES (?, ?, ?)", [user.name, hashed, user.role]);
+            await query("INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)", [user.name, user.email, hashed, user.role]);
             console.log(`Inserted ${user.name}`);
         }
 
-        console.log("Verifying hash length in DB...");
-        const rows = await query("SELECT * FROM users WHERE name = 'admin'");
-        console.log("DB Hash length:", rows[0].password.length, "Hash:", rows[0].password);
-
-        const match = await bcrypt.compare("adminpassword", rows[0].password);
-        console.log("Bcrypt compare check:", match);
+        console.log("Verifying DB...");
+        const rows = await query("SELECT * FROM users WHERE role = 'Admin'");
+        console.log("Found Admins:", rows.length);
 
         process.exit(0);
     } catch (err) {

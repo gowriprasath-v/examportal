@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard - Exam Guard</title>
+    <link rel="stylesheet" href="admin.css">
+    <script>
+        // Immediate redirect based on role if someone lands here
+        const role = localStorage.getItem("role") || "admin";
+        if (role === "admin") window.location.replace("admin-dashboard.html");
+        else if (role === "faculty") window.location.replace("faculty-dashboard.html");
+        else window.location.replace("student-dashboard.html");
+    </script>
+</head>
+
+<body>
+    <div style="display: flex; height: 100vh; align-items: center; justify-content: center; font-family: sans-serif;">
+        <p>Redirecting to your dashboard...</p>
+    </div>
+</body>
+
+</html>

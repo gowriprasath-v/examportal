@@ -37,7 +37,7 @@ body {
     padding: 40px;
     border-radius: 20px;
     width: 400px;
-    box-shadow: 0 15px 40px rgba(0,0,0,0.4);
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4);
 }
 
 .card h2 {
@@ -81,6 +81,7 @@ body {
     color: #4f46e5;
     text-decoration: none;
 }
+
 /* Login Form Layout */
 .login-form {
     display: flex;

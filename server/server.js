@@ -4,6 +4,7 @@ const path = require("path");
 const authRoutes = require("./routes/authRoutes");
 const adminRoutes = require("./routes/adminRoutes");
 const facultyRoutes = require("./routes/facultyRoutes");
+const studentRoutes = require("./routes/studentRoutes");
 require("./db/db"); // Ensures DB connection is made
 
 const app = express();
@@ -20,11 +21,11 @@ app.use(express.static(clientPath));
 app.use("/api/auth", authRoutes); // Login/Users
 app.use("/api/admin", adminRoutes); // User management, Exam monitoring
 app.use("/api/faculty", facultyRoutes); // Exam creation, Reports
+app.use("/api/student", studentRoutes); // Student specific routes
 
 // Catch-all: If no static file or API route matches, serve index.html
 app.use((req, res) => {
     const indexPath = path.join(clientPath, "index.html");
-    console.log(`[${new Date().toLocaleTimeString()}] Catch-all hit for: ${req.url}. Serving: ${indexPath}`);
     res.sendFile(indexPath, (err) => {
         if (err) {
             console.error("Error sending index.html:", err);

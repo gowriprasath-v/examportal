@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Examination - Exam Guard</title>
+    <link rel="stylesheet" href="exam.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+
+    <!-- Professional Sticky Header -->
+    <header class="exam-header">
+        <div class="exam-title" id="examTitle">Loading Exam...</div>
+        <div class="timer-container">
+            <span>⏱️</span>
+            <span id="timerText">00:00</span>
+            <button id="exitExamBtn" class="btn btn-exit"
+                style="display: none; margin-left: 15px; padding: 6px 16px; background: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.9rem; transition: background 0.2s;">Exit</button>
+        </div>
+    </header>
+
+    <!-- Main Question Container -->
+    <main class="exam-container">
+        <div class="question-card">
+            <div class="question-progress" id="questionProgress">Question 0/0</div>
+            <h2 class="question-text" id="questionText">Loading question content...</h2>
+
+            <div class="options-list" id="optionsContainer">
+                <!-- Dynamic Options will be injected here -->
+            </div>
+
+            <!-- Controls -->
+            <div class="exam-controls">
+                <button class="btn btn-prev" id="prevBtn">Prev</button>
+                <button class="btn btn-next" id="nextBtn">Next Question</button>
+            </div>
+        </div>
+    </main>
+
+    <script src="exam.js"></script>
+</body>
+
+</html>

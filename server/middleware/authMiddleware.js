@@ -18,7 +18,7 @@ exports.verifyToken = (req, res, next) => {
 
 exports.verifyRole = (roles) => {
     return (req, res, next) => {
-        if (!req.user || !roles.includes(req.user.role)) {
+        if (!req.user || !roles.some(r => r.toLowerCase() === req.user.role.toLowerCase())) {
             return res.status(403).json({ success: false, message: "Forbidden: You do not have the right role" });
         }
         next();

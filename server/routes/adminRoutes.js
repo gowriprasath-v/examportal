@@ -5,13 +5,21 @@ const { verifyToken, verifyRole } = require("../middleware/authMiddleware");
 
 // All admin routes are protected
 router.use(verifyToken);
-router.use(verifyRole(['admin']));
+router.use(verifyRole(['Admin']));
 
-router.get("/users", admin.getAllUsers);
-router.post("/users", admin.createUser);
-router.delete("/users/:id", admin.deleteUser);
+// MONITORING & STATS
+router.get("/stats", verifyRole(['Admin']), admin.getStats);
+router.get("/users", verifyRole(['Admin']), admin.getAllUsers);
+router.get("/faculty", verifyRole(['Admin']), admin.getFaculty);
+router.get("/students", verifyRole(['Admin']), admin.getStudents);
 
-router.get("/exams", admin.getAllExams);
-router.patch("/exams/:id", admin.updateExamStatus);
+// USER MANAGEMENT (create & delete)
+router.post("/users", verifyRole(['Admin']), admin.createUser);
+router.delete("/users/:id", verifyRole(['Admin']), admin.deleteUser);
+
+// EXAM MANAGEMENT
+router.get("/exams", verifyRole(['Admin']), admin.getAllExams);
+router.patch("/exams/:id", verifyRole(['Admin']), admin.updateExamStatus);
+router.delete("/exams/:id", verifyRole(['Admin']), admin.deleteExam);
 
 module.exports = router;

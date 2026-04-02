@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Exam Details - Exam Guard</title>
+    <link rel="stylesheet" href="admin.css">
+    <style>
+        .question-card {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 1.2rem 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .question-card h4 {
+            margin: 0 0 0.5rem;
+            color: #1e293b;
+            font-size: 0.95rem;
+        }
+
+        .options-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .option-item {
+            font-size: 0.85rem;
+            color: #475569;
+            padding: 0.3rem 0.6rem;
+            border-radius: 6px;
+            background: #f8fafc;
+        }
+
+        .option-item.correct {
+            background: #d1fae5;
+            color: #065f46;
+            font-weight: 600;
+        }
+
+        .q-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 0.8rem;
+        }
+
+        .del-btn {
+            background: none;
+            border: none;
+            color: #ef4444;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .add-q-form {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-top: 1.5rem;
+        }
+
+        .add-q-form label {
+            font-weight: 600;
+            font-size: 0.88rem;
+            color: #1e293b;
+            display: block;
+            margin-bottom: 0.3rem;
+        }
+
+        .add-q-form input,
+        .add-q-form select {
+            width: 100%;
+            padding: 0.6rem 0.8rem;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+            box-sizing: border-box;
+        }
+
+        .options-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.8rem;
+        }
+
+        .status-badge {
+            padding: 0.3rem 0.9rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .empty-msg {
+            text-align: center;
+            padding: 2rem;
+            color: #94a3b8;
+            font-size: 0.95rem;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="sidebar">
+            <h2 class="logo">EXAM GUARD</h2>
+            <p class="menu-title">MAIN MENU</p>
+            <a href="dashboard.html">Dashboard</a>
+            <a href="create-exam.html">Create Exam</a>
+            <p class="menu-title">SETTINGS</p>
+            <a href="profile.html">Profile</a>
+            <a href="#" id="logoutBtn">Logout</a>
+        </div>
+
+        <div class="main">
+            <div class="topbar">
+                <h3>Exam Management Portal</h3>
+                <button class="create-btn" onclick="window.history.back()">← Back</button>
+            </div>
+
+            <h1 id="examTitle">Loading...</h1>
+            <p class="subtitle" id="examDesc"></p>
+
+            <!-- Exam Stats -->
+            <div class="stats" style="margin-top: 1.5rem;">
+                <div class="card">
+                    <p>Duration</p>
+                    <h2 id="examDuration">--</h2>
+                    <small>minutes</small>
+                </div>
+                <div class="card">
+                    <p>Questions</p>
+                    <h2 id="questionCount">--</h2>
+                </div>
+                <div class="card">
+                    <p>Status</p>
+                    <h2 id="examStatus" class="status-badge">--</h2>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div style="margin: 1.5rem 0; display: flex; gap: 1rem;">
+                <button id="publishExamBtn" class="create-btn" style="background:#10b981; display:none;">✅ Publish
+                    Exam</button>
+                <button id="disableExamBtn" class="create-btn" style="background:#ef4444; display:none;">❌ Disable
+                    Exam</button>
+                <button id="draftExamBtn" class="create-btn" style="background:#f59e0b; display:none;">📝 Set to
+                    Draft</button>
+            </div>
+
+            <!-- Questions Section -->
+            <h2 class="section-title">Questions</h2>
+            <div id="questionList">
+                <p class="empty-msg">Loading questions...</p>
+            </div>
+
+            <!-- Add Question Form -->
+            <div class="add-q-form">
+                <h3 style="margin-top:0; color:#1e293b;">➕ Add New Question</h3>
+
+                <label>Question Text *</label>
+                <input type="text" id="qText" placeholder="e.g. What is the primary function of RAM?" />
+
+                <div class="options-row">
+                    <div>
+                        <label>Option 1</label>
+                        <input type="text" id="opt1" placeholder="Option 1" />
+                    </div>
+                    <div>
+                        <label>Option 2</label>
+                        <input type="text" id="opt2" placeholder="Option 2" />
+                    </div>
+                    <div>
+                        <label>Option 3</label>
+                        <input type="text" id="opt3" placeholder="Option 3" />
+                    </div>
+                    <div>
+                        <label>Option 4</label>
+                        <input type="text" id="opt4" placeholder="Option 4" />
+                    </div>
+                </div>
+
+                <label>Correct Answer *</label>
+                <select id="correctOpt">
+                    <option value="1">Option 1</option>
+                    <option value="2">Option 2</option>
+                    <option value="3">Option 3</option>
+                    <option value="4">Option 4</option>
+                </select>
+
+                <button id="addQuestionBtn" class="create-btn" style="width:fit-content;">Save Question</button>
+                <span id="qStatus" style="margin-left: 1rem; font-size:0.9rem;"></span>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", async () => {
+            const params = new URLSearchParams(window.location.search);
+            const examId = params.get("id");
+            const token = localStorage.getItem("token");
+
+            if (!examId) {
+                document.getElementById("examTitle").innerText = "Error: No exam ID in URL.";
+                return;
+            }
+
+            // ── Load exam details ──────────────────────────────────────────
+            async function loadExam() {
+                try {
+                    const res = await fetch(`/api/faculty/exam/${examId}`, {
+                        headers: { Authorization: `Bearer ${token}` }
+                    });
+                    const data = await res.json();
+                    if (!data.success) {
+                        document.getElementById("examTitle").innerText = "Error: " + data.message;
+                        return;
+                    }
+                    const e = data.exam;
+                    document.getElementById("examTitle").innerText = e.title;
+                    document.getElementById("examDesc").innerText = e.description || "";
+                    document.getElementById("examDuration").innerText = e.duration;
+
+                    const statusEl = document.getElementById("examStatus");
+                    statusEl.innerText = e.status.toUpperCase();
+                    if (e.status === "published") { statusEl.style.background = "#d1fae5"; statusEl.style.color = "#065f46"; }
+                    else if (e.status === "disabled") { statusEl.style.background = "#fee2e2"; statusEl.style.color = "#991b1b"; }
+                    else { statusEl.style.background = "#fef3c7"; statusEl.style.color = "#92400e"; }
+
+                    document.getElementById("publishExamBtn").style.display = e.status !== "published" ? "inline-block" : "none";
+                    document.getElementById("disableExamBtn").style.display = e.status !== "disabled" ? "inline-block" : "none";
+                    document.getElementById("draftExamBtn").style.display = e.status !== "draft" ? "inline-block" : "none";
+                } catch (err) {
+                    console.error("Error loading exam:", err);
+                }
+            }
+
+            // ── Load questions ─────────────────────────────────────────────
+            async function loadQuestions() {
+                try {
+                    const res = await fetch(`/api/faculty/exam/${examId}/questions`, {
+                        headers: { Authorization: `Bearer ${token}` }
+                    });
+                    const data = await res.json();
+                    const container = document.getElementById("questionList");
+                    const count = data.questions ? data.questions.length : 0;
+                    document.getElementById("questionCount").innerText = count;
+
+                    if (!data.success || count === 0) {
+                        container.innerHTML = `<div class="empty-msg">No questions added yet. Use the form below to add questions.</div>`;
+                        return;
+                    }
+
+                    container.innerHTML = data.questions.map((q, i) => {
+                        const options = [q.option1, q.option2, q.option3, q.option4];
+                        return `
+                        <div class="question-card">
+                            <h4>Q${i + 1}: ${q.question}</h4>
+                            <div class="options-grid">
+                                ${options.map((opt, idx) => `
+                                    <div class="option-item ${q.correct_option === idx + 1 ? 'correct' : ''}">
+                                        ${idx + 1}. ${opt || '<em>—</em>'} ${q.correct_option === idx + 1 ? '✓' : ''}
+                                    </div>
+                                `).join('')}
+                            </div>
+                            <div class="q-footer">
+                                <small style="color:#94a3b8;">Question ID: ${q.id}</small>
+                                <button class="del-btn" onclick="deleteQuestion(${q.id})">🗑 Delete</button>
+                            </div>
+                        </div>`;
+                    }).join('');
+                } catch (err) {
+                    console.error("Error loading questions:", err);
+                    document.getElementById("questionList").innerHTML = `<p style="color:red">Failed to load questions.</p>`;
+                }
+            }
+
+            // ── Update exam status ──────────────────────────────────────────
+            async function updateStatus(newStatus) {
+                try {
+                    const res = await fetch(`/api/faculty/exam/${examId}/status`, {
+                        method: "PATCH",
+                        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                        body: JSON.stringify({ status: newStatus })
+                    });
+                    const data = await res.json();
+                    if (data.success) { alert(`Status updated to "${newStatus}"`); await loadExam(); }
+                    else alert("Error: " + data.message);
+                } catch (err) { alert("Failed to update status."); }
+            }
+
+            // ── Delete question ─────────────────────────────────────────────
+            window.deleteQuestion = async (qId) => {
+                if (!confirm("Delete this question?")) return;
+                try {
+                    const res = await fetch(`/api/faculty/question/${qId}`, {
+                        method: "DELETE",
+                        headers: { Authorization: `Bearer ${token}` }
+                    });
+                    const data = await res.json();
+                    if (data.success) { await loadQuestions(); }
+                    else alert("Error: " + data.message);
+                } catch (err) { alert("Failed to delete question."); }
+            };
+
+            // ── Add question ────────────────────────────────────────────────
+            document.getElementById("addQuestionBtn").addEventListener("click", async () => {
+                const question = document.getElementById("qText").value.trim();
+                const option1 = document.getElementById("opt1").value.trim();
+                const option2 = document.getElementById("opt2").value.trim();
+                const option3 = document.getElementById("opt3").value.trim();
+                const option4 = document.getElementById("opt4").value.trim();
+                const correct_option = parseInt(document.getElementById("correctOpt").value);
+                const statusEl = document.getElementById("qStatus");
+
+                if (!question || !option1 || !option2) {
+                    statusEl.style.color = "red";
+                    statusEl.innerText = "Question text, Option 1 and Option 2 are required.";
+                    return;
+                }
+
+                statusEl.innerText = "Saving...";
+                statusEl.style.color = "#64748b";
+
+                try {
+                    const res = await fetch("/api/faculty/add-questions", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                        body: JSON.stringify({
+                            exam_id: parseInt(examId),
+                            questions: [{ question, option1, option2, option3, option4, correct_option }]
+                        })
+                    });
+                    const data = await res.json();
+                    if (data.success) {
+                        statusEl.style.color = "green";
+                        statusEl.innerText = "✅ Question saved!";
+                        // Clear form
+                        ["qText", "opt1", "opt2", "opt3", "opt4"].forEach(id => document.getElementById(id).value = "");
+                        document.getElementById("correctOpt").value = "1";
+                        await loadQuestions();
+                        setTimeout(() => statusEl.innerText = "", 2000);
+                    } else {
+                        statusEl.style.color = "red";
+                        statusEl.innerText = "❌ " + data.message;
+                    }
+                } catch (err) {
+                    statusEl.style.color = "red";
+                    statusEl.innerText = "❌ Save failed.";
+                    console.error(err);
+                }
+            });
+
+            // ── Status buttons ──────────────────────────────────────────────
+            document.getElementById("publishExamBtn").addEventListener("click", () => updateStatus("published"));
+            document.getElementById("disableExamBtn").addEventListener("click", () => {
+                if (confirm("Disable this exam?")) updateStatus("disabled");
+            });
+            document.getElementById("draftExamBtn").addEventListener("click", () => updateStatus("draft"));
+
+            // ── Initial load ────────────────────────────────────────────────
+            await loadExam();
+            await loadQuestions();
+        });
+    </script>
+</body>
+
+</html>
